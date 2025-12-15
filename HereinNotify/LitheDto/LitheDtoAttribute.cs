@@ -32,7 +32,7 @@ namespace HereinNotify
     public sealed class LitheDtoNameAttribute : Attribute
     {
         /// <summary>
-        /// 忽略哪些属性
+        /// 指定新的命名
         /// </summary>
         public string Name = null;
 
