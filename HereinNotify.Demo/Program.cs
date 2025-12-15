@@ -21,7 +21,7 @@ namespace HereinNotify.Demo
         {
             TestHereinNotifyPropertyGenerator.Run();
             TestDtoGenerator.Run();
-
+            UserAndRoleDemo.Run();
 
             Console.ReadLine();
         }

@@ -41,6 +41,7 @@ namespace HereinNotify.Demo
     {
         internal static void Run()
         {
+            Console.WriteLine("\r\n===============");
             var model = new TestModel();
             model.Id = -999;
             Console.WriteLine($"Id改变：{model.IdIsChanged}");

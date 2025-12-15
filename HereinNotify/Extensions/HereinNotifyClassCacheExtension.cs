@@ -196,7 +196,7 @@ namespace HereinNotify.Extensions
         /// <returns></returns>
         private static void GeneratorProperty(this HereinNotifyFieldCache field, GeneratorCache<HereinNotifyClassCache> generator)
         {
-            generator.AppendCode($"/// <inheritdoc>"); // 继承文档
+            generator.AppendCode($"/// <inheritdoc cref=\"{field.Name}\"/>"); // 继承文档
             field.GeneratorPropertyCustomAttribute(generator); // 生成自定义特性
             generator.AppendCode($"public {field.Type} {field.PropertyName}");
             generator.AppendCode($"{{");

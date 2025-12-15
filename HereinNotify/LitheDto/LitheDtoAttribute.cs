@@ -24,5 +24,27 @@ namespace HereinNotify
         public bool IsUseINPC = false;  
 
     }
+    
+    /// <summary>
+    /// 表示自动生成的属性
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = true, Inherited = true)]
+    public sealed class LitheDtoNameAttribute : Attribute
+    {
+        /// <summary>
+        /// 忽略哪些属性
+        /// </summary>
+        public string Name = null;
+
+        /// <summary>
+        /// 映射为指定名称的属性
+        /// </summary>
+        /// <param name="name"></param>
+
+        public LitheDtoNameAttribute(string name)
+        {
+            Name = name;
+        }
+    }
 
 }

@@ -9,6 +9,9 @@ namespace HereinNotify.Models
 {
     internal abstract class ClassCache
     {
+        public List<Action<SourceProductionContext>> SendGeneratorError { get; set; } = new List<Action<SourceProductionContext>>();
+
+
         public ClassCache(ClassDeclarationSyntax classDeclaration)
         {
             var className = classDeclaration.Identifier.Text;

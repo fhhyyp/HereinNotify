@@ -34,6 +34,12 @@ namespace HereinNotify
 
 
         /// <summary>
+        /// 用来 nameof() 的
+        /// </summary>
+        internal static LitheDtoNameAttribute LitheDtoName = null;
+
+
+        /// <summary>
         /// 初始化生成器，定义需要执行的生成逻辑。
         /// </summary>
         /// <param name="context">增量生成器的上下文，用于注册生成逻辑</param>
@@ -90,6 +96,12 @@ namespace HereinNotify
                 if (classSymbol is null)
                     return null;
 
+                if (classSymbol.ToString().Contains("UserModel"))
+                {
+
+                }
+                Dictionary<string, ITypeSymbol> propHas = new Dictionary<string, ITypeSymbol>();
+
                 var classCache = new LitheDtoClassCache(classDeclaration);
                 classCache.BuildCacheOfClass(classSymbol, (info, attr) =>
                 {
@@ -100,23 +112,54 @@ namespace HereinNotify
                         var argType = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.Source) && x.Value.Kind == TypedConstantKind.Type);
                         var isUseINPCConstant  = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.IsUseINPC) && x.Value.Kind == TypedConstantKind.Primitive);
                         var isUseINPC = isUseINPCConstant.Key is null ? false : isUseINPCConstant.Value.Value is bool uinpc ? uinpc : false;
-
+                         
                         DtoClassSourceInfo dto = null;
                         if (argType.Value.Value is ITypeSymbol sourceType)
                         {
                             var sourceTypeName = sourceType.ToString();
-                            var properties = sourceType.GetMembers()
+                            var members = sourceType.GetMembers();
+                            var properties = members
                                                        .OfType<IPropertySymbol>()
                                                        .Where(p => p.DeclaredAccessibility == Accessibility.Public).ToList();
                             if (properties.Count > 0)
                             {
                                 dto = new DtoClassSourceInfo(sourceTypeName);
                                 dto.IsUseINPC = isUseINPC;
-                                foreach (var p in properties)
+                                foreach (IPropertySymbol prop in properties)
                                 {
-                                    var propName = p.Name; // 属性名称
-                                    var propType = p.Type.ToDisplayString(); // 完整类型
-                                    dto.AddProp(propName, propType);
+                                    var propName = prop.Name;
+                                    var propInfo = dto.AddProp(prop);
+                                    if (!propHas.TryGetValue(propName, out var orgsoureType) || propInfo.IsHasOtherName)
+                                     {
+                                        propHas[(propInfo.IsHasOtherName ? propInfo .OtherName: propName)] = sourceType;
+                                    }
+                                    else 
+                                    {
+                                        // var orgProp = dto.Props[prop.Name];
+                                        
+
+                                        // 存在同名属性
+                                        var desc = new DiagnosticDescriptor(
+                                                               id: "HNDTO001",
+                                                               title: "实体命名重复",
+                                                               messageFormat: $"分部类型 '{dto.TypeName}' 本应生成 '{sourceTypeName} ' 的属性 '{prop.Name}'  ，但同名属性已存在于类型 '{orgsoureType}'， " +
+                                                               $"请添加 [{nameof(LitheDtoNameAttribute)}] 特性标记属性别名。" ,
+                                                               category: "MemberDefinition",
+                                                               defaultSeverity: DiagnosticSeverity.Error,
+                                                               isEnabledByDefault: true
+                                        );
+
+                                        classCache.SendGeneratorError.Add((scontext) =>
+                                        {
+                                            scontext.ReportDiagnostic(Diagnostic.Create(
+                                           desc,
+                                            location: classDeclaration.GetLocation(),
+                                            classCache.ClassName
+                                        ));
+                                        });
+
+                                        
+                                    }
                                 }
                                 classCache.AddDtoSoucre(dto);
 
@@ -140,17 +183,6 @@ namespace HereinNotify
                     }
 
                 });
-
-
-
-                /*bool isInherited = GeneratorHelper.InheritsFromHereinNotifyObject(classSymbol);
-                bool isUseAttr = classCache.Cache.ContainsAttr(nameof(HereinNotifyObjectAttribute));*/
-
-                
-                /*classCache.IsInherited = isInherited;
-                classCache.IsUseHereinNotifyObjectAttribute = isUseAttr;
-                var fieldDeclarations = classDeclaration.Members.OfType<FieldDeclarationSyntax>();
-                classCache.BuildCacheOfField(semanticModel, fieldDeclarations);*/
 
 
                 return classCache;
@@ -178,6 +210,8 @@ namespace HereinNotify
                 return;
             }
 
+            classCache.SendGeneratorError.ForEach(x => x.Invoke(context));
+
             var generatedFileName = $"{classCache.ClassName}.g.cs";
             var generatedCode = classCache.GenerateCode();
             context.AddSource(generatedFileName, SourceText.From(generatedCode, Encoding.UTF8));
@@ -192,7 +226,7 @@ namespace HereinNotify
     internal class LitheDtoClassCache : ClassCache
     {
         /// <summary>
-        /// 变量名称
+        /// 变量名称(类型主键索引)
         /// </summary>
         public Dictionary<string, DtoClassSourceInfo> DtoSourceInfos { get; } = new Dictionary<string, DtoClassSourceInfo>();
 
@@ -227,23 +261,13 @@ namespace HereinNotify
         public bool IsUseINPC { get; set; }
         public string TypeName { get;}
 
-        public Dictionary<string, DtoPropInfo> Props { get; } = new Dictionary<string, DtoPropInfo>();
+        public List<DtoPropInfo> Props { get; } = new List<DtoPropInfo>();
 
         public HashSet<string> IgnoredMenber { get; } = new HashSet<string>();
 
         public DtoClassSourceInfo(string typeName)
         {
             TypeName = typeName;
-        }
-
-
-        public void AddProp(string name, string type)
-        {
-            if (Props.ContainsKey(name))
-            {
-                return;
-            }
-            Props[name] = new DtoPropInfo(this, name, type);
         }
 
         internal void AddIgnored(string member)
@@ -253,7 +277,15 @@ namespace HereinNotify
 
         internal IEnumerable<DtoPropInfo> GetProps()
         {
-           return Props.Values.Where(x => !IgnoredMenber.Contains(x.PropName));
+           return Props.Where(x => !IgnoredMenber.Contains(x.PropName));
+        }
+
+        internal DtoPropInfo AddProp(IPropertySymbol prop)
+        {
+            var propName = prop.Name; // 属性名称
+            var info  = new DtoPropInfo(this, prop);
+            Props.Add(info);
+            return info;
         }
     }
 
@@ -261,6 +293,7 @@ namespace HereinNotify
     internal class DtoPropInfo
     {
         internal DtoClassSourceInfo ClassSourceInfo { get;  }
+        public IPropertySymbol PropSymbol { get; }
 
         /// <summary>
         /// 属性名称
@@ -272,11 +305,52 @@ namespace HereinNotify
         /// </summary>
         internal string TypeName { get;}
 
-        internal DtoPropInfo(DtoClassSourceInfo info, string propName, string typeName)
+        /// <summary>
+        /// 其它名称
+        /// </summary>
+        public string OtherName { get; }
+
+        /// <summary>
+        /// 包含其它名称
+        /// </summary>
+        public bool IsHasOtherName => !string.IsNullOrWhiteSpace(OtherName);    
+
+
+        internal DtoPropInfo(DtoClassSourceInfo info, IPropertySymbol prop)
         {
             ClassSourceInfo = info;
+            PropSymbol = prop;
+
+
+            var propName = prop.Name;
+            var propType = prop.Type.ToDisplayString(); // 完整类型
+            var otherName = string.Empty;
+
+            #region 查询其它名称
+            prop.GetAttributes()
+                .FirstOrDefault(x =>
+                {
+                    var attrName = x.AttributeClass?.Name;
+                    if (attrName == nameof(LitheDtoNameAttribute))
+                    {
+                        var args = x.ConstructorArguments;
+                        if (args.Length == 1 && args[0].Kind == TypedConstantKind.Primitive)
+                        {
+                            var nameValue = args[0].Value?.ToString();
+                            if (!string.IsNullOrWhiteSpace(nameValue))
+                            {
+                                otherName = nameValue;
+                            }
+                        }
+                        return true;
+                    }
+                    return false;
+                });
+            #endregion
+
             PropName = propName;
-            TypeName = typeName;
+            OtherName = otherName;
+            TypeName = propType;
         }
     }
 

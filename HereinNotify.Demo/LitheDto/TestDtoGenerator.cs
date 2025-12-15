@@ -16,8 +16,19 @@ namespace HereinNotify.Demo.LitheDto
 
     internal class TestObject1
     {
+        /// <summary>
+        /// 测试1
+        /// </summary>
         public int ValueX { get; set; }
+
+        /// <summary>
+        /// 测试2
+        /// </summary>
         public int ValueY { get; set; }
+
+        /// <summary>
+        /// 测试3
+        /// </summary>
         public int ValueZ { get; set; }
     }
     internal class TestObject2
@@ -30,6 +41,7 @@ namespace HereinNotify.Demo.LitheDto
     {
         public static void Run()
         {
+            Console.WriteLine("\r\n===============");
             var obj1 = new TestObject1
             {
                 ValueX = 999,

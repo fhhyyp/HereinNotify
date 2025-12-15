@@ -128,25 +128,38 @@ namespace HereinNotify.Extensions
             return generator;
         }
 
-
-
         private static void GeneratorProperty(this DtoPropInfo propInfo, GeneratorCache<LitheDtoClassCache> generator)
         {
+            var propName = propInfo.PropName;
+            var propType = propInfo.TypeName;
+            var otherName = propInfo.OtherName;
+
             if (!propInfo.ClassSourceInfo.IsUseINPC)
             {
-                var propName = propInfo.PropName;
-                var propType = propInfo.TypeName;
-                generator.AppendCode($"public {propType} {propName} {{ get; set; }}");
+                generator.AppendCode($"/// <inheritdoc cref=\"{propInfo.ClassSourceInfo.TypeName}.{propInfo.PropName}\"/>"); // 继承文档
+                if (propInfo.IsHasOtherName)
+                {
+                    generator.AppendCode($"public {propType} {otherName} {{ get; set; }}");
+                }
+                else
+                {
+                    generator.AppendCode($"public {propType} {propName} {{ get; set; }}");
+                }
             }
             else
             {
-                var propName = propInfo.PropName;
-                var propType = propInfo.TypeName;
-                var fieldName = $" _{propName}";
                 var oldVarName = "__oldValue";
+                var fieldName = $" _{propName}";
+                if (propInfo.IsHasOtherName)
+                {
+                    propName = otherName;
+                    fieldName = $" _{otherName}";
+                }
                 generator.AppendCode($"partial void On{propName}Changed({propType} oldValue, {propType} newValue);");
                 generator.AppendCode($"partial void On{propName}Changed({propType} value);");
                 generator.AppendCode($"private {propType} {fieldName};");
+
+                generator.AppendCode($"/// <inheritdoc cref=\"{propInfo.ClassSourceInfo.TypeName}.{propInfo.PropName}\"/>"); // 继承文档
                 generator.AppendCode($"public {propType} {propName}");
                 generator.AppendCode($"{{");
                 generator.IncreaseTab();
@@ -162,6 +175,7 @@ namespace HereinNotify.Extensions
                 generator.AppendCode($"}}");
                 generator.DecreaseTab();
                 generator.AppendCode($"}}");
+
 
             }
         }
@@ -190,7 +204,15 @@ namespace HereinNotify.Extensions
             {
                 var propName = prop.PropName;
                 var propType = prop.TypeName;
-                generator.AppendCode($"{model}.{propName} = {input}.{propName}; ");
+                var otherName = prop.OtherName;
+                if (prop.IsHasOtherName)
+                {
+                    generator.AppendCode($"{model}.{otherName} = {input}.{propName}; ");
+                }
+                else
+                {
+                    generator.AppendCode($"{model}.{propName} = {input}.{propName}; ");
+                }
             }
 
             generator.AppendCode($"return {model};");
@@ -224,7 +246,15 @@ namespace HereinNotify.Extensions
             foreach (var prop in props)
             {
                 var propName = prop.PropName;
-                generator.AppendCode($"{output}.{propName} = {model}.{propName}; ");
+                var otherName = prop.OtherName;
+                if (prop.IsHasOtherName)
+                {
+                    generator.AppendCode($"{output}.{propName} = {model}.{otherName}; ");
+                }
+                else
+                {
+                    generator.AppendCode($"{output}.{propName} = {model}.{propName}; ");
+                }
             }
             generator.AppendCode($"return {output};");
             generator.DecreaseTab();
@@ -254,7 +284,15 @@ namespace HereinNotify.Extensions
             foreach (var prop in props)
             {
                 var propName = prop.PropName;
-                generator.AppendCode($"{target}.{propName} = {model}.{propName}; ");
+                var otherName = prop.OtherName;
+                if (prop.IsHasOtherName)
+                {
+                    generator.AppendCode($"{target}.{propName} = {model}.{otherName}; ");
+                }
+                else
+                {
+                    generator.AppendCode($"{target}.{propName} = {model}.{propName}; ");
+                }
             }
             generator.DecreaseTab();
             generator.AppendCode($"}}");
