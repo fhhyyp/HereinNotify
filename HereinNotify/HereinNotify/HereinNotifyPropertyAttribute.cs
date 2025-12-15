@@ -7,6 +7,33 @@ namespace HereinNotify
 {
 
 
+
+    /// <summary>
+    /// 标记一个bool字段，如果当前类存在需要监视改变的属性，如若当发生改变时，该值将会被置为 true。
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
+    public sealed class HereinChangedStateAttribute : Attribute
+    {
+        /// <summary>
+        /// 是否为生成通知属性（仅限字段）
+        /// </summary>
+        public bool IsNotify = false;
+    }
+
+
+    /// <summary>
+    /// 标记一个bool字段，如果当前类存在需要验证的属性，如若当验证失败时，该值将会被置为 true。
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Field , AllowMultiple = false, Inherited = true)]
+    public sealed class HereinVerifyFailStateAttribute : Attribute
+    {
+        /// <summary>
+        /// 是否为生成通知属性
+        /// </summary>
+        public bool IsNotify = false;
+    }
+
+
     /// <summary>
     /// 标记一个字段，为其自动创建属性属性
     /// </summary>

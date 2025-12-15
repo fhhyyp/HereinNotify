@@ -35,6 +35,14 @@ namespace HereinNotify
         /// 用来 nameof() 的
         /// </summary>
         internal static HereinNotifyObjectAttribute HereinNotifyObject = null;
+        /// <summary>
+        /// 用来 nameof() 的
+        /// </summary>
+        internal static HereinChangedStateAttribute HereinChangedState = null;
+        /// <summary>
+        /// 用来 nameof() 的
+        /// </summary>
+        internal static HereinVerifyFailStateAttribute HereinVerifyFailState = null;
 
         /// <summary>
         /// 初始化生成器，定义需要执行的生成逻辑。
@@ -42,7 +50,7 @@ namespace HereinNotify
         /// <param name="context">增量生成器的上下文，用于注册生成逻辑</param>
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //Debugger.Launch(); // 用于调试源生成器
+            // Debugger.Launch(); // 用于调试源生成器
 
             var classDeclarations = context.SyntaxProvider
                                            .CreateSyntaxProvider(Predicate, Transform)
@@ -153,6 +161,7 @@ namespace HereinNotify
                  ));
             }
 
+            
 
             foreach (var field in classCache.GetFields().OfType<HereinNotifyFieldCache>())
             {
@@ -176,7 +185,7 @@ namespace HereinNotify
             }
 
             var generatedFileName = $"{classCache.ClassName}.g.cs";
-            var generatedCode = classCache.GenerateCode();
+            var generatedCode = classCache.GenerateCode(context);
             context.AddSource(generatedFileName, SourceText.From(generatedCode, Encoding.UTF8));
         }
 
@@ -284,6 +293,18 @@ namespace HereinNotify
         /// 是否需要生成属性
         /// </summary>
         public bool IsUseHereinNotifyPropertyAttribute()
+        {
+            if (this.Cache.ContainsAttr(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty)))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// 是否需要生成属性
+        /// </summary>
+        public bool IsState()
         {
             if (this.Cache.ContainsAttr(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty)))
             {

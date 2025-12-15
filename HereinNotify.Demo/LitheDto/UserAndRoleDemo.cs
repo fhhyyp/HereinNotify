@@ -50,6 +50,11 @@ namespace HereinNotify.Demo.LitheDto
 
     }
 
+    /*public partial class UserModel
+    {
+
+    }*/
+
 
     public partial class UserViewModel : HereinNotifyObject
     {

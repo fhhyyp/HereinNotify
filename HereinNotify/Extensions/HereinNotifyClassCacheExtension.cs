@@ -1,4 +1,5 @@
 ﻿using HereinNotify.Models;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
@@ -16,21 +17,18 @@ namespace HereinNotify.Extensions
         /// 代码生成
         /// </summary>
         /// <param name="classCache"></param>
+        /// <param name="context"></param>
         /// <returns></returns>
-        internal static string GenerateCode(this HereinNotifyClassCache classCache)
+        internal static string GenerateCode(this HereinNotifyClassCache classCache, SourceProductionContext context)
         {
             var sb = new StringBuilder();
-            var generator = new GeneratorCache<HereinNotifyClassCache>(classCache, sb);
+            var generator = new GeneratorCache<HereinNotifyClassCache>(context, classCache, sb);
             var code = generator.GeneratorUsing() // 添加 using
                                 .GeneratorNamespace(() => // 添加命名空间
                                  {
                                      generator.GeneratorClass(() =>
                                      {
-                                         if (!classCache.IsInherited
-                                            && classCache.IsUseHereinNotifyObjectAttribute)
-                                         {
-                                             generator.GeneratorINPC(); // 生成INPC接口
-                                         }
+                                         generator.GeneratorMembers();
                                      }); // 添加通知属性的分布类
                                  }).ToCode();
             return code;
@@ -67,31 +65,89 @@ namespace HereinNotify.Extensions
             generator.AppendCode($"partial class {generator.ClassCache.ClassName}"); // 命名空间
             generator.AppendCode($"{{");
             generator.IncreaseTab();
-            var fields = generator.ClassCache.GetFields().OfType<HereinNotifyFieldCache>();
-            foreach (var field in fields)
-            {
-                generator.AppendCode($"");
-                if (!field.IsUseHereinNotifyPropertyAttribute())
-                {
-                    continue;
-                }
-                if (field.IsIgnore)
-                {
-                    continue;
-                }
-                field.InitAttribute(); // 初始化字段特性
-                field.GeneratorProperty(generator);
-                field.GeneratorPartialMethod(generator);
-                if (field.IsChanged)
-                {
-                    field.GeneratorMonitorChanged(generator);
-                }
-                generator.AppendCode($"");
-            }
+            
             execute.Invoke();
             generator.DecreaseTab();
             generator.AppendCode($"}}");
             return generator;
+        }
+
+
+        private class GeneratorMemberContext
+        {
+            public GeneratorMemberContext(GeneratorCache<HereinNotifyClassCache> generator)
+            {
+                Generator = generator;
+            }
+
+            public List<HereinNotifyFieldCache> FieldToProps { get; } = new List<HereinNotifyFieldCache>();
+            public List<HereinNotifyFieldCache> Changeds { get; } = new List<HereinNotifyFieldCache>();
+            public List<HereinNotifyFieldCache> VerifyFails { get; } = new List<HereinNotifyFieldCache>();
+
+            public GeneratorCache<HereinNotifyClassCache> Generator { get; set; }
+        } 
+
+        /// <summary>
+        /// 生成所有属性
+        /// </summary>
+        /// <param name="generator"></param>
+        private static void GeneratorMembers(this GeneratorCache<HereinNotifyClassCache> generator)
+        {
+            var fields = generator.ClassCache.GetFields().OfType<HereinNotifyFieldCache>();
+            // 需要优先生成状态属性
+            GeneratorMemberContext context = new GeneratorMemberContext(generator);
+
+            foreach (var field in fields)
+            {
+                if (field.Cache.GetAttr(nameof(HereinNotifyPropertyGenerator.HereinVerifyFailState)) is AttrInfo verifyAttrInfo)
+                {
+                    context.VerifyFails.Add(field);
+                }
+                else if (field.Cache.GetAttr(nameof(HereinNotifyPropertyGenerator.HereinChangedState)) is AttrInfo changedAttrInfo)
+                {
+                    context.Changeds.Add(field);
+                }
+                
+
+                if(field.IsUseHereinNotifyPropertyAttribute())
+                {
+                    context.FieldToProps.Add(field);
+                }
+            }
+
+
+
+            // 通知属性
+            foreach (var field in context.FieldToProps)
+            {
+                generator.AppendCode($"");
+                if (field.IsUseHereinNotifyPropertyAttribute())
+                {
+                    if (field.IsIgnore)
+                    {
+                        continue;
+                    }
+                    field.InitAttribute(); // 初始化字段特性
+                    field.GeneratorPropertys(context);
+                    field.GeneratorPartialMethod(generator);
+                    if (field.IsChanged)
+                    {
+                        field.GeneratorMonitorChanged(generator);
+                    }
+                    generator.AppendCode($"");
+                }
+                else
+                {
+                    // 
+                }
+            }
+
+
+            if (!generator.ClassCache.IsInherited
+               && generator.ClassCache.IsUseHereinNotifyObjectAttribute)
+            {
+                generator.GeneratorINPC(); // 生成INPC接口
+            }
         }
 
         /// <summary>
@@ -192,17 +248,19 @@ namespace HereinNotify.Extensions
         /// 生成通知属性
         /// </summary>
         /// <param name="field"></param>
-        /// <param name="generator"></param>
+        /// <param name="context"></param>
         /// <returns></returns>
-        private static void GeneratorProperty(this HereinNotifyFieldCache field, GeneratorCache<HereinNotifyClassCache> generator)
+        private static void GeneratorPropertys(this HereinNotifyFieldCache field, GeneratorMemberContext context)
         {
+            var generator = context.Generator;
+
             generator.AppendCode($"/// <inheritdoc cref=\"{field.Name}\"/>"); // 继承文档
             field.GeneratorPropertyCustomAttribute(generator); // 生成自定义特性
             generator.AppendCode($"public {field.Type} {field.PropertyName}");
             generator.AppendCode($"{{");
             generator.IncreaseTab();
-            field.GeneratorPropertyGetter(generator); // 生成 getter
-            field.GeneratorPropertySetter(generator); // 生成 setter
+            field.GeneratorPropertyGetter(context); // 生成 getter
+            field.GeneratorPropertySetter(context); // 生成 setter
             generator.DecreaseTab();
             generator.AppendCode($"}}");
         }
@@ -252,20 +310,21 @@ namespace HereinNotify.Extensions
         /// 生成属性的Getter
         /// </summary>
         /// <param name="field"></param>
-        /// <param name="generator"></param>
-        private static void GeneratorPropertyGetter(this HereinNotifyFieldCache field, GeneratorCache<HereinNotifyClassCache> generator)
+        /// <param name="context"></param>
+        private static void GeneratorPropertyGetter(this HereinNotifyFieldCache field, GeneratorMemberContext context)
         {
-            generator.AppendCode($"get => {field.Name};"); // 生成 getter
+            context.Generator.AppendCode($"get => {field.Name};"); // 生成 getter
         }
-        
+
 
         /// <summary>
         /// 生成属性的Setter
         /// </summary>
         /// <param name="field"></param>
-        /// <param name="generator"></param>
-        private static void GeneratorPropertySetter(this HereinNotifyFieldCache field, GeneratorCache<HereinNotifyClassCache> generator)
+        /// <param name="context"></param>
+        private static void GeneratorPropertySetter(this HereinNotifyFieldCache field, GeneratorMemberContext context)
         {
+            GeneratorCache<HereinNotifyClassCache> generator = context.Generator;
             var fieldName = field.Name; // 获取字段名称
             var fieldType = field.Type; // 获取字段类型
             var propertyName = field.PropertyName; // 合适的属性名称
@@ -286,6 +345,11 @@ namespace HereinNotify.Extensions
                 generator.AppendCode($"{{");
                 generator.IncreaseTab();
                 generator.AppendCode($"On{propertyName}VerifyFail(value);");
+                foreach(var vierfyFailField in context.VerifyFails)
+                {
+                    var vierfyFailMemberName = vierfyFailField.IsUseHereinNotifyPropertyAttribute() ? vierfyFailField.PropertyName : vierfyFailField.Name;
+                    generator.AppendCode($"{vierfyFailMemberName} = true;");
+                }
                 generator.AppendCode($"return;");
                 generator.DecreaseTab();
                 generator.AppendCode($"}}");
@@ -296,7 +360,17 @@ namespace HereinNotify.Extensions
             if (field.IsChanged)
             {
                 generator.AppendCode($"bool isChanged = SetProperty(ref {fieldName}, value);");
-                generator.AppendCode($"if(isChanged) {monitorPropertyName} = true;");
+                generator.AppendCode($"if(isChanged)");
+                generator.AppendCode($"{{");
+                generator.IncreaseTab();
+                generator.AppendCode($"{monitorPropertyName} = true;");
+                foreach (var changedField in context.Changeds)
+                {
+                    var changedMemberName = changedField.IsUseHereinNotifyPropertyAttribute() ? changedField.PropertyName : changedField.Name;
+                    generator.AppendCode($"{changedMemberName} = true;");
+                }
+                generator.DecreaseTab();
+                generator.AppendCode($"}}");
 
             }
             else

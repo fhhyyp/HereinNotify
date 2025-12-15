@@ -1,4 +1,5 @@
 ﻿using HereinNotify.Models;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
@@ -18,10 +19,10 @@ namespace HereinNotify.Extensions
         /// </summary>
         /// <param name="classCache"></param>
         /// <returns></returns>
-        internal static string GenerateCode(this LitheDtoClassCache classCache)
+        internal static string GenerateCode(this LitheDtoClassCache classCache, SourceProductionContext context)
         {
             var sb = new StringBuilder();
-            var generator = new GeneratorCache<LitheDtoClassCache>(classCache, sb);
+            var generator = new GeneratorCache<LitheDtoClassCache>(context, classCache, sb);
             var code = generator.GeneratorUsing() // 添加 using
                                 .GeneratorNamespace(() => // 添加命名空间
                                  {

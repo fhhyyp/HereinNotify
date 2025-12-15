@@ -47,4 +47,16 @@ namespace HereinNotify
         }
     }
 
+    /*/// <summary>
+    /// 使用其它DTO类映射的属性（不支持重复嵌套）
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
+    public sealed class LitheDtoInheritAttribute : Attribute
+    {
+        /// <summary>
+        /// 使用其它DTO类映射的属性
+        /// </summary>
+        public Type DtoType = null;
+    }*/
+
 }

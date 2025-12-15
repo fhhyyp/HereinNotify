@@ -1,15 +1,18 @@
-﻿using System.Text;
+﻿using Microsoft.CodeAnalysis;
+using System.Text;
 
 namespace HereinNotify.Models
 {
     internal class GeneratorCache<TClassCache> where TClassCache : ClassCache
     {
+        public SourceProductionContext Context { get; }
         public TClassCache ClassCache { get;  }
 
         private StringBuilder Builder { get; }
 
-        public GeneratorCache(TClassCache cache, StringBuilder builder)
+        public GeneratorCache(Microsoft.CodeAnalysis.SourceProductionContext context, TClassCache cache, StringBuilder builder)
         {
+            Context = context;
             ClassCache = cache;
             Builder = builder;
         }

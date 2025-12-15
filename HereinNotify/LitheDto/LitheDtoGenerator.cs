@@ -101,88 +101,10 @@ namespace HereinNotify
 
                 }
                 Dictionary<string, ITypeSymbol> propHas = new Dictionary<string, ITypeSymbol>();
+                //Dictionary<string, string> inheritDtos = new Dictionary<string, string>();
 
                 var classCache = new LitheDtoClassCache(classDeclaration);
-                classCache.BuildCacheOfClass(classSymbol, (info, attr) =>
-                {
-                    var attributeName = attr.AttributeClass?.Name;
-                    if (attributeName == nameof(LitheDtoAttribute))
-                    {
-                        var anargs = attr.NamedArguments.ToList();
-                        var argType = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.Source) && x.Value.Kind == TypedConstantKind.Type);
-                        var isUseINPCConstant  = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.IsUseINPC) && x.Value.Kind == TypedConstantKind.Primitive);
-                        var isUseINPC = isUseINPCConstant.Key is null ? false : isUseINPCConstant.Value.Value is bool uinpc ? uinpc : false;
-                         
-                        DtoClassSourceInfo dto = null;
-                        if (argType.Value.Value is ITypeSymbol sourceType)
-                        {
-                            var sourceTypeName = sourceType.ToString();
-                            var members = sourceType.GetMembers();
-                            var properties = members
-                                                       .OfType<IPropertySymbol>()
-                                                       .Where(p => p.DeclaredAccessibility == Accessibility.Public).ToList();
-                            if (properties.Count > 0)
-                            {
-                                dto = new DtoClassSourceInfo(sourceTypeName);
-                                dto.IsUseINPC = isUseINPC;
-                                foreach (IPropertySymbol prop in properties)
-                                {
-                                    var propName = prop.Name;
-                                    var propInfo = dto.AddProp(prop);
-                                    if (!propHas.TryGetValue(propName, out var orgsoureType) || propInfo.IsHasOtherName)
-                                     {
-                                        propHas[(propInfo.IsHasOtherName ? propInfo .OtherName: propName)] = sourceType;
-                                    }
-                                    else 
-                                    {
-                                        // var orgProp = dto.Props[prop.Name];
-                                        
-
-                                        // 存在同名属性
-                                        var desc = new DiagnosticDescriptor(
-                                                               id: "HNDTO001",
-                                                               title: "实体命名重复",
-                                                               messageFormat: $"分部类型 '{dto.TypeName}' 本应生成 '{sourceTypeName} ' 的属性 '{prop.Name}'  ，但同名属性已存在于类型 '{orgsoureType}'， " +
-                                                               $"请添加 [{nameof(LitheDtoNameAttribute)}] 特性标记属性别名。" ,
-                                                               category: "MemberDefinition",
-                                                               defaultSeverity: DiagnosticSeverity.Error,
-                                                               isEnabledByDefault: true
-                                        );
-
-                                        classCache.SendGeneratorError.Add((scontext) =>
-                                        {
-                                            scontext.ReportDiagnostic(Diagnostic.Create(
-                                           desc,
-                                            location: classDeclaration.GetLocation(),
-                                            classCache.ClassName
-                                        ));
-                                        });
-
-                                        
-                                    }
-                                }
-                                classCache.AddDtoSoucre(dto);
-
-                                var argIgnore = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.Ignore) && x.Value.Kind == TypedConstantKind.Array);
-                                if (argIgnore.Key is null)
-                                {
-                                    return;
-                                }
-                                var arrayValues = argIgnore.Value.Values;
-                                var ignoredMembers = arrayValues.Select(x => x.Value?.ToString())
-                                                                .Where(x => !string.IsNullOrWhiteSpace(x))
-                                                                .ToImmutableArray();
-                                foreach (var member in ignoredMembers)
-                                {
-                                    dto.AddIgnored(member);
-                                }
-                            }
-                        }
-
-                       
-                    }
-
-                });
+                classCache.BuildCacheOfClass(classSymbol, (AttrInfo info, AttributeData attr) => CustomHandle(info, attr, classDeclaration, propHas, classCache));
 
 
                 return classCache;
@@ -191,6 +113,85 @@ namespace HereinNotify
             {
                 return null;
             }
+        }
+
+
+        private static void CustomHandle(AttrInfo info, AttributeData attr, ClassDeclarationSyntax classDeclaration, Dictionary<string, ITypeSymbol> propHas, LitheDtoClassCache classCache)
+        {
+            var attributeName = attr.AttributeClass?.Name;
+            if (attributeName == nameof(LitheDtoAttribute))
+            {
+                var anargs = attr.NamedArguments.ToList();
+                var argType = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.Source) && x.Value.Kind == TypedConstantKind.Type);
+                var isUseINPCConstant = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.IsUseINPC) && x.Value.Kind == TypedConstantKind.Primitive);
+                var isUseINPC = isUseINPCConstant.Key is null ? false : isUseINPCConstant.Value.Value is bool uinpc ? uinpc : false;
+
+                DtoClassSourceInfo dto = null;
+                if (argType.Value.Value is ITypeSymbol sourceType)
+                {
+                    var sourceTypeName = sourceType.ToString();
+                    var members = sourceType.GetMembers();
+                    var properties = members.OfType<IPropertySymbol>()
+                                             .Where(p => p.DeclaredAccessibility == Accessibility.Public).ToList();
+                    if (properties.Count <= 0)
+                    {
+                        return;
+                    }
+                    dto = new DtoClassSourceInfo(sourceTypeName);
+                    dto.IsUseINPC = isUseINPC;
+                    foreach (IPropertySymbol prop in properties)
+                    {
+                        var propName = prop.Name;
+                        var propInfo = dto.AddProp(prop);
+                        if (propHas.TryGetValue(propName, out var orgsoureType) && !propInfo.IsHasOtherName)
+                        {
+                            // 存在同名属性
+                            var desc = new DiagnosticDescriptor(
+                                                   id: "HNDTO001",
+                                                   title: "实体命名重复",
+                                                   messageFormat: $"分部类型 '{dto.TypeName}' 本应生成 '{sourceTypeName} ' 的属性 '{prop.Name}'  ，但同名属性已存在于类型 '{orgsoureType}'， " +
+                                                   $"请添加 [{nameof(LitheDtoNameAttribute)}] 特性标记属性别名。",
+                                                   category: "MemberDefinition",
+                                                   defaultSeverity: DiagnosticSeverity.Error,
+                                                   isEnabledByDefault: true
+                            );
+
+                            classCache.SendGeneratorError.Add((scontext) =>
+                            {
+                                scontext.ReportDiagnostic(Diagnostic.Create(
+                               desc,
+                                location: classDeclaration.Identifier.GetLocation(),
+                                classCache.ClassName
+                            ));
+                            });
+
+
+                        }
+                        else
+                        {
+                            propHas[(propInfo.IsHasOtherName ? propInfo.OtherName : propName)] = sourceType;
+                        }
+                    }
+                    classCache.AddDtoSoucre(dto);
+
+                    var argIgnore = anargs.FirstOrDefault(x => x.Key == nameof(LitheDtoAttribute.Ignore) && x.Value.Kind == TypedConstantKind.Array);
+                    if (argIgnore.Key is null)
+                    {
+                        return;
+                    }
+                    var arrayValues = argIgnore.Value.Values;
+                    var ignoredMembers = arrayValues.Select(x => x.Value?.ToString())
+                                                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                                                    .ToImmutableArray();
+                    foreach (var member in ignoredMembers)
+                    {
+                        dto.AddIgnored(member);
+                    }
+
+                }
+
+            }
+
         }
 
         /// <summary>
@@ -213,7 +214,7 @@ namespace HereinNotify
             classCache.SendGeneratorError.ForEach(x => x.Invoke(context));
 
             var generatedFileName = $"{classCache.ClassName}.g.cs";
-            var generatedCode = classCache.GenerateCode();
+            var generatedCode = classCache.GenerateCode(context);
             context.AddSource(generatedFileName, SourceText.From(generatedCode, Encoding.UTF8));
         }
 
