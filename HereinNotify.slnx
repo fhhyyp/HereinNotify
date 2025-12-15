@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="HereinNotify.Demo/HereinNotify.Demo.csproj" Id="bd8a4580-4741-43ef-9980-eb6e03e467d6" />
+  <Project Path="HereinNotify/HereinNotify.csproj" />
+</Solution>
