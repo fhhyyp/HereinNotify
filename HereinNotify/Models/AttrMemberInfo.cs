@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace HereinNotify.Models
@@ -31,11 +32,19 @@ namespace HereinNotify.Models
         public T GetFirstValue<T>()
         {
             var value = Values.FirstOrDefault();
-            if (value is T result)
+            if (typeof(T).IsEnum && value is int @int)
+            {
+                if (Enum.IsDefined(typeof(T), @int))
+                {
+                    return (T)(object)value;
+                }
+                return default;
+            }
+            else if (value is T result)
             {
                 return (T)result;
             }
-            return default(T);
+            return default;
         }
 
         public override string ToString()

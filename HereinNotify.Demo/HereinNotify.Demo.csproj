@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net10.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<!--<ImplicitUsings>enable</ImplicitUsings>-->
 		<Nullable>enable</Nullable>
 
@@ -28,6 +28,10 @@
 		<!--代码生成器生成路径-->
 		<CompilerGeneratedFilesOutputPath>.\obj\g</CompilerGeneratedFilesOutputPath>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\HereinNotify\HereinNotify.csproj" OutputItemType="Analyzer" />

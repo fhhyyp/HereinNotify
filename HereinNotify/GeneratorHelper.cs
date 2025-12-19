@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System;
 using System.Linq;
 namespace HereinNotify
 {
@@ -21,15 +22,26 @@ namespace HereinNotify
         }
 
         /// <summary>
+        /// 字段名称转换为属性名称
+        /// </summary>
+        /// <returns>遵循属性命名规范的新名称</returns>
+        public static string GetPropertyName(string fieldName)
+        {
+            var propertyName = fieldName.StartsWith("_") ? char.ToUpper(fieldName[1]) + fieldName.Substring(2) : char.ToUpper(fieldName[0]) + fieldName.Substring(1); // 创建属性名称
+            return propertyName;
+        }
+
+        /// <summary>
         /// 检查是否继承了某个类
         /// </summary>
         /// <param name="symbol"></param>
+        /// <param name="func"></param>
         /// <returns></returns>
-        internal static bool InheritsFromHereinNotifyObject(INamedTypeSymbol symbol)
+        internal static bool Inherits(this INamedTypeSymbol symbol, Func<INamedTypeSymbol, bool> func)
         {
             while (symbol != null)
             {
-                if (symbol.Name == nameof(HereinNotifyObject)) // 如果继承了该类
+                if (func.Invoke(symbol)) // 如果继承了该类
                     return true;
 
                 symbol = symbol.BaseType;

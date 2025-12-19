@@ -1,4 +1,5 @@
-﻿using HereinNotify.Models;
+﻿using HereinNotify.Extensions;
+using HereinNotify.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
@@ -7,17 +8,17 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace HereinNotify.Extensions
+namespace HereinNotify.LitheDto
 {
 
 
     internal static class LitheDtoClassCacheExtension
     {
-
         /// <summary>
         /// 代码生成
         /// </summary>
         /// <param name="classCache"></param>
+        /// <param name="context"></param>
         /// <returns></returns>
         internal static string GenerateCode(this LitheDtoClassCache classCache, SourceProductionContext context)
         {
@@ -55,7 +56,6 @@ namespace HereinNotify.Extensions
 
         }
 
-
         /// <summary>
         /// 实现INPC接口
         /// </summary>
@@ -77,8 +77,6 @@ namespace HereinNotify.Extensions
             generator.AppendCode("");
             return generator;
         }
-
-
 
         /// <summary>
         /// 生成命名空间
@@ -181,9 +179,6 @@ namespace HereinNotify.Extensions
             }
         }
 
-        
-
-
         private static void GeneratorInputMethod(this DtoClassSourceInfo classInfo, GeneratorCache<LitheDtoClassCache> generator)
         {
             var className = generator.ClassCache.ClassName;
@@ -221,7 +216,6 @@ namespace HereinNotify.Extensions
             generator.AppendCode($"}}");
             //hasProp.Clear();
         }
-
 
         private static void GeneratorOutputMethod(this DtoClassSourceInfo classInfo, GeneratorCache<LitheDtoClassCache> generator)
         {
@@ -262,8 +256,6 @@ namespace HereinNotify.Extensions
             generator.AppendCode($"}}");
         }
 
-
-
         private static void GeneratorWriteMethod(this DtoClassSourceInfo classInfo, GeneratorCache<LitheDtoClassCache> generator)
         {
 
@@ -298,9 +290,6 @@ namespace HereinNotify.Extensions
             generator.DecreaseTab();
             generator.AppendCode($"}}");
         }
-
-
-
 
     }
 }

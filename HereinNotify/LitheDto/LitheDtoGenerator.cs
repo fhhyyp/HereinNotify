@@ -1,22 +1,16 @@
 ﻿using HereinNotify.Extensions;
+using HereinNotify.LitheDto;
 using HereinNotify.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks.Sources;
-using System.Xml.Linq;
 namespace HereinNotify
 {
 
@@ -28,24 +22,14 @@ namespace HereinNotify
     public class LitheDtoGenerator : IIncrementalGenerator
     {
         /// <summary>
-        /// 用来 nameof() 的
-        /// </summary>
-        internal static LitheDtoAttribute LitheDto = null;
-
-
-        /// <summary>
-        /// 用来 nameof() 的
-        /// </summary>
-        internal static LitheDtoNameAttribute LitheDtoName = null;
-
-
-        /// <summary>
         /// 初始化生成器，定义需要执行的生成逻辑。
         /// </summary>
         /// <param name="context">增量生成器的上下文，用于注册生成逻辑</param>
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            //Debugger.Launch(); // 用于调试源生成器
+
+            if (GeneratorConfig.IsDebugLitheDto)
+                Debugger.Launch(); // 用于调试源生成器
 
             var classDeclarations = context.SyntaxProvider
                                            .CreateSyntaxProvider(Predicate, Transform)
@@ -104,7 +88,10 @@ namespace HereinNotify
                 //Dictionary<string, string> inheritDtos = new Dictionary<string, string>();
 
                 var classCache = new LitheDtoClassCache(classDeclaration);
-                classCache.BuildCacheOfClass(classSymbol, (AttrInfo info, AttributeData attr) => CustomHandle(info, attr, classDeclaration, propHas, classCache));
+                classCache.BuildCacheOfClass(classSymbol, context, (AttrInfo info, AttributeData attr) => 
+                CustomHandle(context, info, attr, classDeclaration, propHas, classCache));
+
+
 
 
                 return classCache;
@@ -116,9 +103,12 @@ namespace HereinNotify
         }
 
 
-        private static void CustomHandle(AttrInfo info, AttributeData attr, ClassDeclarationSyntax classDeclaration, Dictionary<string, ITypeSymbol> propHas, LitheDtoClassCache classCache)
+        private static void CustomHandle(GeneratorSyntaxContext context, AttrInfo info, AttributeData attr, ClassDeclarationSyntax classDeclaration, Dictionary<string, ITypeSymbol> propHas, LitheDtoClassCache classCache)
         {
             var attributeName = attr.AttributeClass?.Name;
+
+            var semanticModel = context.SemanticModel;
+
             if (attributeName == nameof(LitheDtoAttribute))
             {
                 var anargs = attr.NamedArguments.ToList();
@@ -129,7 +119,8 @@ namespace HereinNotify
                 DtoClassSourceInfo dto = null;
                 if (argType.Value.Value is ITypeSymbol sourceType)
                 {
-                    var sourceTypeName = sourceType.ToString();
+                    
+                    var sourceTypeName = sourceType.ToDisplayString(GeneratorConfig.GlobalFullTypeFormat);
                     var members = sourceType.GetMembers();
                     var properties = members.OfType<IPropertySymbol>()
                                              .Where(p => p.DeclaredAccessibility == Accessibility.Public).ToList();
@@ -137,12 +128,23 @@ namespace HereinNotify
                     {
                         return;
                     }
+
                     dto = new DtoClassSourceInfo(sourceTypeName);
+
                     dto.IsUseINPC = isUseINPC;
                     foreach (IPropertySymbol prop in properties)
                     {
                         var propName = prop.Name;
                         var propInfo = dto.AddProp(prop);
+
+                      /*  var typeSymbol = semanticModel.GetTypeInfo(prop.Declaration.Type).Type;
+                        if (typeSymbol == null)
+                        {
+                            continue;
+                        }
+
+                        var typeName = typeSymbol.ToDisplayString(GeneratorConfig.GlobalFullTypeFormat);*/
+
                         if (propHas.TryGetValue(propName, out var orgsoureType) && !propInfo.IsHasOtherName)
                         {
                             // 存在同名属性
@@ -324,7 +326,7 @@ namespace HereinNotify
 
 
             var propName = prop.Name;
-            var propType = prop.Type.ToDisplayString(); // 完整类型
+            var propType =  prop.Type.ToDisplayString(GeneratorConfig.GlobalFullTypeFormat);
             var otherName = string.Empty;
 
             #region 查询其它名称
@@ -356,9 +358,9 @@ namespace HereinNotify
     }
 
 
-    internal class LitheDtoFieldCache : FieldCache
+    internal class LitheDtoFieldCache : MemberCache
     {
-        public LitheDtoFieldCache(VariableDeclaratorSyntax variable, string fieldName, string type) : base(variable, fieldName, type)
+        public LitheDtoFieldCache(MemberCacheInfo info) : base(info)
         {
         }
 

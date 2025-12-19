@@ -1,4 +1,5 @@
 ﻿using HereinNotify.Extensions;
+using HereinNotify.HereinNotify;
 using HereinNotify.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -23,26 +24,6 @@ namespace HereinNotify
     [Generator]
     public class HereinNotifyPropertyGenerator : IIncrementalGenerator
     {
-        /// <summary>
-        /// 用来 nameof() 的
-        /// </summary>
-        internal static HereinNotifyPropertyAttribute HereinNotifyProperty = null;
-        /// <summary>
-        /// 用来 nameof() 的
-        /// </summary>
-        internal static HereinUsingAttribute HereinUsing = null;
-        /// <summary>
-        /// 用来 nameof() 的
-        /// </summary>
-        internal static HereinNotifyObjectAttribute HereinNotifyObject = null;
-        /// <summary>
-        /// 用来 nameof() 的
-        /// </summary>
-        internal static HereinChangedStateAttribute HereinChangedState = null;
-        /// <summary>
-        /// 用来 nameof() 的
-        /// </summary>
-        internal static HereinVerifyFailStateAttribute HereinVerifyFailState = null;
 
         /// <summary>
         /// 初始化生成器，定义需要执行的生成逻辑。
@@ -50,7 +31,8 @@ namespace HereinNotify
         /// <param name="context">增量生成器的上下文，用于注册生成逻辑</param>
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // Debugger.Launch(); // 用于调试源生成器
+            if (GeneratorConfig.IsDebugHereinNotify)
+                Debugger.Launch(); // 用于调试源生成器
 
             var classDeclarations = context.SyntaxProvider
                                            .CreateSyntaxProvider(Predicate, Transform)
@@ -102,7 +84,8 @@ namespace HereinNotify
                     return null;
 
                 var classCache = new HereinNotifyClassCache(classDeclaration);
-                classCache.BuildCacheOfClass(classSymbol, (info, attr) =>
+
+                classCache.BuildCacheOfClass(classSymbol, context, (info, attr) =>
                 {
                     var attributeName = attr.AttributeClass?.Name;
                     if (attributeName == nameof(HereinUsingAttribute))
@@ -117,15 +100,13 @@ namespace HereinNotify
                     }
                 });
 
-                bool isInherited = GeneratorHelper.InheritsFromHereinNotifyObject(classSymbol);
-                bool isUseAttr = classCache.Cache.ContainsAttr(nameof(HereinNotifyObjectAttribute));
+                bool isInherited = classSymbol.Inherits(s => s.Name == nameof(HereinNotifyObject)); // 判断是否继承了 HereinNotifyObject
 
-                
+                bool isUseAttr = classCache.Cache.ContainsAttr<HereinNotifyObjectAttribute>();
+
                 classCache.IsInherited = isInherited;
                 classCache.IsUseHereinNotifyObjectAttribute = isUseAttr;
 
-                var fieldDeclarations = classDeclaration.Members.OfType<FieldDeclarationSyntax>();
-                classCache.BuildCacheOfField(semanticModel, fieldDeclarations);
                 return classCache;
             }
             else
@@ -163,7 +144,7 @@ namespace HereinNotify
 
             
 
-            foreach (var field in classCache.GetFields().OfType<HereinNotifyFieldCache>())
+            foreach (var field in classCache.GetMembers().OfType<HereinNotifyFieldCache>().Where(m => m.Kind == MemberKind.Field))
             {
                 if (field.Name == field.PropertyName)
                 {
@@ -208,16 +189,16 @@ namespace HereinNotify
         }
 
 
-        public override FieldCache AddField(VariableDeclaratorSyntax variable, string fieldName, string type)
+        public override MemberCache AddMember(MemberCacheInfo info) 
         {
-            if (FieldCaches.TryGetValue(fieldName, out var fieldCache))
+            if (MemberCaches.TryGetValue(info.Name, out var fieldCache))
             {
                 return fieldCache;
             }
             else
             {
-                var field = new HereinNotifyFieldCache(variable, fieldName, type);
-                FieldCaches.Add(field.Name, field);
+                var field = new HereinNotifyFieldCache(info);
+                MemberCaches.Add(field.Name, field);
                 return field;
             }
         }
@@ -228,7 +209,7 @@ namespace HereinNotify
         /// </summary>
         public bool IsUseHereinNotifyPropertyAttribute()
         {
-            foreach (var item in FieldCaches.Values)
+            foreach (var item in MemberCaches.Values)
             {
                 var type = item.GetType();
                 if(item is HereinNotifyFieldCache hereinNotifyField)
@@ -246,7 +227,7 @@ namespace HereinNotify
 
 
 
-    internal class HereinNotifyFieldCache : FieldCache
+    internal class HereinNotifyFieldCache : MemberCache
     {
 
         /// <summary>
@@ -264,9 +245,9 @@ namespace HereinNotify
         /// </summary>
         public bool IsUseHereinNotifyObjectAttribute { get; set; }
 
-        public HereinNotifyFieldCache(VariableDeclaratorSyntax variable, string fieldName, string type) : base(variable, fieldName, type)
+        public HereinNotifyFieldCache(MemberCacheInfo info) : base(info)
         {
-            PropertyName = GetPropertyName(fieldName);
+            PropertyName = GeneratorHelper.GetPropertyName(info.Name);
         }
 
         /// <summary>
@@ -279,22 +260,13 @@ namespace HereinNotify
         /// </summary>
         public bool IsIgnore { get; internal set; }
 
-        /// <summary>
-        /// 字段名称转换为属性名称
-        /// </summary>
-        /// <returns>遵循属性命名规范的新名称</returns>
-        private static string GetPropertyName(string fieldName)
-        {
-            var propertyName = fieldName.StartsWith("_") ? char.ToUpper(fieldName[1]) + fieldName.Substring(2) : char.ToUpper(fieldName[0]) + fieldName.Substring(1); // 创建属性名称
-            return propertyName;
-        }
 
         /// <summary>
         /// 是否需要生成属性
         /// </summary>
         public bool IsUseHereinNotifyPropertyAttribute()
         {
-            if (this.Cache.ContainsAttr(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty)))
+            if (this.Cache.ContainsAttr<HereinNotifyPropertyAttribute>())
             {
                 return true;
             }
@@ -306,7 +278,7 @@ namespace HereinNotify
         /// </summary>
         public bool IsState()
         {
-            if (this.Cache.ContainsAttr(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty)))
+            if (this.Cache.ContainsAttr<HereinNotifyPropertyAttribute>())
             {
                 return true;
             }

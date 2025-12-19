@@ -1,4 +1,5 @@
-﻿using HereinNotify.Models;
+﻿using HereinNotify.Extensions;
+using HereinNotify.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
@@ -6,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace HereinNotify.Extensions
+namespace HereinNotify.HereinNotify
 {
 
 
@@ -93,17 +94,18 @@ namespace HereinNotify.Extensions
         /// <param name="generator"></param>
         private static void GeneratorMembers(this GeneratorCache<HereinNotifyClassCache> generator)
         {
-            var fields = generator.ClassCache.GetFields().OfType<HereinNotifyFieldCache>();
+            var fields = generator.ClassCache.GetMembers().OfType<HereinNotifyFieldCache>().Where(m => m.Kind == MemberKind.Field);
+
             // 需要优先生成状态属性
             GeneratorMemberContext context = new GeneratorMemberContext(generator);
 
             foreach (var field in fields)
             {
-                if (field.Cache.GetAttr(nameof(HereinNotifyPropertyGenerator.HereinVerifyFailState)) is AttrInfo verifyAttrInfo)
+                if (field.Cache.GetAttr<HereinVerifyFailStateAttribute>() is AttrInfo verifyAttrInfo)
                 {
                     context.VerifyFails.Add(field);
                 }
-                else if (field.Cache.GetAttr(nameof(HereinNotifyPropertyGenerator.HereinChangedState)) is AttrInfo changedAttrInfo)
+                else if (field.Cache.GetAttr<HereinChangedStateAttribute>() is AttrInfo changedAttrInfo)
                 {
                     context.Changeds.Add(field);
                 }
@@ -156,11 +158,11 @@ namespace HereinNotify.Extensions
         /// <param name="field"></param>
         private static void InitAttribute(this HereinNotifyFieldCache field)
         {
-            var hnp = field.Cache.GetAttr(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty));
+            var hnp = field.Cache.GetAttr<HereinNotifyPropertyAttribute>();
 
-            var isVerifySetter = hnp?.GetMenber(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty.IsVerify))?
+            var isVerifySetter = hnp?.GetMenber(nameof(HereinNotifyPropertyAttribute.IsVerify))?
                                      .GetFirstValue<bool>() ?? false;
-            var isMonitorChanged = hnp?.GetMenber(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty.IsChanged))?
+            var isMonitorChanged = hnp?.GetMenber(nameof(HereinNotifyPropertyAttribute.IsChanged))?
                                       .GetFirstValue<bool>() ?? false;
 
             field.IsVerify = isVerifySetter;
@@ -253,6 +255,7 @@ namespace HereinNotify.Extensions
         private static void GeneratorPropertys(this HereinNotifyFieldCache field, GeneratorMemberContext context)
         {
             var generator = context.Generator;
+            
 
             generator.AppendCode($"/// <inheritdoc cref=\"{field.Name}\"/>"); // 继承文档
             field.GeneratorPropertyCustomAttribute(generator); // 生成自定义特性
@@ -273,12 +276,12 @@ namespace HereinNotify.Extensions
         /// <param name="generator"></param>
         private static void GeneratorPropertyCustomAttribute(this HereinNotifyFieldCache field, GeneratorCache<HereinNotifyClassCache> generator)
         {
-            var hnp = field.Cache.GetAttr(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty));
+            var hnp = field.Cache.GetAttr<HereinNotifyPropertyAttribute>();
 
 
-            var attrs = hnp?.GetMenber(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty.Attr))?
+            var attrs = hnp?.GetMenber(nameof(HereinNotifyPropertyAttribute.Attr))?
                            .GetValues() ?? new List<object>();
-            var attrParmass = hnp?.GetMenber(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty.AttrParmas))?
+            var attrParmass = hnp?.GetMenber(nameof(HereinNotifyPropertyAttribute.AttrParmas))?
                               .GetValues() ?? new List<object>();
 
             var len = Math.Min(attrs.Count, attrParmass.Count);
@@ -300,7 +303,7 @@ namespace HereinNotify.Extensions
                 }
             }
 
-            generator.AppendCode($"[{nameof(HereinNotify)}.{nameof(HereinAutoPropertyAttribute)}]"); // 表示自动生成的属性
+            //generator.AppendCode($"[{nameof(HereinAutoPropertyAttribute)}]"); // 表示自动生成的属性
             
 
 
@@ -383,8 +386,8 @@ namespace HereinNotify.Extensions
             generator.AppendCode($"On{propertyName}Changed(__oldValue, value);");
 
             // 通知其它属性
-            var notifyOtherPropertNames = field.Cache.GetAttr(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty))?
-                                                     .GetMenber(nameof(HereinNotifyPropertyGenerator.HereinNotifyProperty.Notify))?
+            var notifyOtherPropertNames = field.Cache.GetAttr<HereinNotifyPropertyAttribute>()?
+                                                     .GetMenber(nameof(HereinNotifyPropertyAttribute.Notify))?
                                                      .GetValues() ?? new List<object>();
             foreach (var nopn in notifyOtherPropertNames)
             {

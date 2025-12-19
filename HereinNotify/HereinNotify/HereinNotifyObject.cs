@@ -10,6 +10,7 @@ namespace HereinNotify
     /// </summary>
     public class HereinNotifyObject : global::System.ComponentModel.INotifyPropertyChanged
     {
+
         /// <inheritdoc/> 
         public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
         

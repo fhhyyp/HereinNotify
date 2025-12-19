@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="HereinNotify.Demo.Wpf/HereinNotifyDemoWpf.csproj" Id="69a4d081-4ecf-44ad-8fdd-68b487dbf555" />
   <Project Path="HereinNotify.Demo/HereinNotify.Demo.csproj" Id="bd8a4580-4741-43ef-9980-eb6e03e467d6" />
   <Project Path="HereinNotify/HereinNotify.csproj" />
 </Solution>

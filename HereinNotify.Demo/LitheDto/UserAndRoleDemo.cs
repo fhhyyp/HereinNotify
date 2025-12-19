@@ -1,10 +1,10 @@
-﻿using System;
+﻿using HereinNotify;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace HereinNotify.Demo.LitheDto
+namespace HereinNotifyDemo.LitheDtoTest
 {
-
 
 
     public class UserDbo
@@ -22,6 +22,8 @@ namespace HereinNotify.Demo.LitheDto
         /// 用户密码
         /// </summary>
         public string? UserPwd { get; set; }
+
+        
     }
 
     public class RoleDbo
@@ -39,7 +41,10 @@ namespace HereinNotify.Demo.LitheDto
         /// <summary>
         /// 角色名称
         /// </summary>
-        public string? RoleName { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+
+
+
     }
 
 
@@ -60,6 +65,7 @@ namespace HereinNotify.Demo.LitheDto
     {
         [HereinNotifyProperty]
         private UserModel? _model;
+
 
     }
 

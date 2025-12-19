@@ -1,6 +1,6 @@
-﻿using HereinNotify.Demo.LitheDto;
+﻿using HereinNotifyDemo.LitheDtoTest;
 using System;
-namespace HereinNotify.Demo
+namespace HereinNotifyDemo
 {
 
 

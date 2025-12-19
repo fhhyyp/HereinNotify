@@ -4,16 +4,16 @@ namespace HereinNotify.Models
 {
     internal class AttrInfo
     {
-        public string AttrName { get; }
+        public string AttrTypeName { get; }
 
         /// <summary>
         /// 一个符号可能存在多个特性
         /// </summary>
         public Dictionary<string, AttrMemberInfo> Members { get; } = new Dictionary<string, AttrMemberInfo>();
 
-        internal AttrInfo(string attrName)
+        internal AttrInfo(string attrTypeName)
         {
-            AttrName = attrName;
+            AttrTypeName = attrTypeName;
         }
 
         public bool ContainsMember(string memberName)
@@ -46,7 +46,7 @@ namespace HereinNotify.Models
 
         public override string ToString()
         {
-            return $"Attr:{AttrName} -> {string.Join(",", Members.Values)}";
+            return $"Attr:{AttrTypeName} -> {string.Join(",", Members.Values)}";
         }
     }
 }

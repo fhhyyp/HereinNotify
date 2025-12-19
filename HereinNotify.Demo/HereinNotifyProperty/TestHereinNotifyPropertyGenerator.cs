@@ -1,9 +1,12 @@
-﻿using System;
+﻿using HereinNotify;
+using System;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Text.Json.Serialization;
-namespace HereinNotify.Demo
+using System.Threading.Tasks;
+
+namespace HereinNotifyDemo
 {
     [HereinUsing("System.Text.Json.Serialization")]
     internal partial class TestModel : HereinNotifyObject
@@ -13,7 +16,7 @@ namespace HereinNotify.Demo
         [HereinNotifyProperty(Notify = nameof(Name))]
         private int _id = 666;
 
-        [HereinNotifyProperty(Attr = typeof(TestAttribute), AttrParmas = "\"Test_A\"")]
+        //[HereinNotifyProperty(Attr = typeof(TestAttribute), AttrParmas = "\"Test_A\"")]
         [HereinNotifyProperty(Attr = typeof(JsonPropertyNameAttribute), AttrParmas = "\"UserName\"")]
         private string _name = string.Empty;
 
@@ -24,27 +27,26 @@ namespace HereinNotify.Demo
         [HereinChangedState]
         [HereinNotifyProperty]
         private bool _isChanged;
-        
-
 
         partial void VerifyIdSetter(ref bool isAllow, int newValue) => isAllow = newValue > 0;
         partial void OnIdVerifyFail(int value) => Console.WriteLine($"赋值被拦截：{value}");
-        //partial void OnIdChanged(int oldValue, int newValue) => Console.WriteLine($"old : {oldValue},     new :{newValue}");
+        partial void OnIdChanged(int oldValue, int newValue) => Console.WriteLine($"old : {oldValue},     new :{newValue}");
+
+
     }
 
 
-    [AttributeUsage(AttributeTargets.All, AllowMultiple = true, Inherited = true)]
-    public sealed class TestAttribute : Attribute
-    {
-        public TestAttribute(string value)
-        {
 
-        }
-    }
+
+
 
 
     internal static class TestHereinNotifyPropertyGenerator
     {
+
+#if true
+
+
         internal static void Run()
         {
             Console.WriteLine("\r\n===============");
@@ -73,13 +75,10 @@ namespace HereinNotify.Demo
 
             typeof(TestModel).GetProperties().ToList().ForEach(p => p.GetCustomAttributes().ToList().ForEach(a => Console.WriteLine($"为属性{p.Name}自动生成特性： {a}")));
 
-
-
-
-
         }
 
 
+#endif
     }
 
 }

@@ -1,14 +1,14 @@
-﻿using System;
+﻿using HereinNotify;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace HereinNotify.Demo.LitheDto
+namespace HereinNotifyDemo.LitheDtoTest
 {
     [LitheDto(Source = typeof(TestObject1))]
     [LitheDto(Source = typeof(TestObject2), IsUseINPC = true)] // 标记了IsUseINPC为true时，就会自动实现 INotifyPropertyChanged
     internal partial class TestDto
     {
-
         partial void OnIdChanged(int oldValue, int newValue)
         {
         }
@@ -57,6 +57,7 @@ namespace HereinNotify.Demo.LitheDto
             var dto = new TestDto().InputTestObject1(obj1).InputTestObject2(obj2);
             Console.WriteLine(dto.ValueX);
 
+            
 
             var dto2 = new TestDto
             {

@@ -17,6 +17,8 @@ namespace HereinNotify.Models
             var className = classDeclaration.Identifier.Text;
             var @namespace = GeneratorHelper.GetNamespace(classDeclaration);
 
+            
+
             ClassName = className;
             Namespace = @namespace;
             Syntax = classDeclaration;
@@ -55,24 +57,24 @@ namespace HereinNotify.Models
         /// <summary>
         /// 字段符号缓存
         /// </summary>
-        protected Dictionary<string, FieldCache> FieldCaches { get; } = new Dictionary<string, FieldCache>();
+        protected Dictionary<string, MemberCache> MemberCaches { get; } = new Dictionary<string, MemberCache>();
+        public string ClassFullName { get; internal set; }
 
-
-        public virtual FieldCache AddField(VariableDeclaratorSyntax variable, string fieldName, string type)
+        public virtual MemberCache AddMember(MemberCacheInfo info) 
         {
-            if (FieldCaches.TryGetValue(fieldName, out var fieldCache))
+            if (MemberCaches.TryGetValue(info.Name, out var fieldCache))
             {
                 return fieldCache;
             }
             else
             {
-                var field = new FieldCache(variable, fieldName, type);
-                FieldCaches.Add(field.Name, field);
+                var field = new MemberCache(info);
+                MemberCaches.Add(field.Name, field);
                 return field;
             }
         }
 
-        public List<FieldCache> GetFields() => FieldCaches.Values.ToList();
+        public List<MemberCache> GetMembers() => MemberCaches.Values.ToList();
 
         public override string ToString()
         {
