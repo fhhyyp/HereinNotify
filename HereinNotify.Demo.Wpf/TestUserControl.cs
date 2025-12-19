@@ -10,7 +10,7 @@ namespace HereinNotifyDemoWpf
     {
 
         [CustomProperty(BindingType = BindType.TwoWay, IsNew = true)]
-        private static int myPropertyAAAA = 555;
+        private static int _dataName ;
 
         [CustomPart]
         private Label PART_123;

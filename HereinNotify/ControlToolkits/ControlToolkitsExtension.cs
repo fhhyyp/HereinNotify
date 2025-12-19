@@ -153,7 +153,7 @@ namespace HereinNotify.ControlToolkits
 
             var propName = propInfo.Name;
             var propType = propInfo.Type;
-            var defaultValue = propInfo.DefaultValue;
+            var defaultValue = string.IsNullOrWhiteSpace(propInfo.DefaultValue) ? "default" : propInfo.DefaultValue;
             var propertyName = GeneratorHelper.GetPropertyName(propInfo.Name);
             var bindType = propInfo.Cache.GetAttr<CustomPropertyAttribute, BindType>(x => x.BindingType);
             var isNew = propInfo.Cache.GetAttr<CustomPropertyAttribute, bool>(x => x.IsNew);

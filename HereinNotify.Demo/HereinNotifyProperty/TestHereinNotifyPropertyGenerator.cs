@@ -16,7 +16,6 @@ namespace HereinNotifyDemo
         [HereinNotifyProperty(Notify = nameof(Name))]
         private int _id = 666;
 
-        //[HereinNotifyProperty(Attr = typeof(TestAttribute), AttrParmas = "\"Test_A\"")]
         [HereinNotifyProperty(Attr = typeof(JsonPropertyNameAttribute), AttrParmas = "\"UserName\"")]
         private string _name = string.Empty;
 
