@@ -167,7 +167,6 @@ namespace HereinNotify.ControlToolkits
 
             if (isAttached)
             {
-               
                 generator.AppendCode($"public static {propType} Get{propertyName}({DependencyObject} obj)");
                 generator.AppendCode($"{{");
                 generator.IncreaseTab();
@@ -189,7 +188,6 @@ namespace HereinNotify.ControlToolkits
                 generator.AppendCode($"obj.SetValue({propertyProperty}, value);");
                 generator.DecreaseTab();
                 generator.AppendCode($"}}");
-
             }
             else
             {
@@ -213,7 +211,7 @@ namespace HereinNotify.ControlToolkits
                 }
 
                 generator.AppendCode($"/// <inheritdoc cref=\"{propName}\"/>"); // 继承文档
-                generator.AppendCode($"public {propType} {propertyName}");
+                generator.AppendCode($"public {(isNew ? "new" : "")} {propType} {propertyName}");
                 generator.AppendCode($"{{");
                 generator.IncreaseTab();
                 generator.AppendCode($"get {{ return ({propType})GetValue({propertyProperty}); }}"); // getter方法
@@ -223,9 +221,11 @@ namespace HereinNotify.ControlToolkits
 
             }
 
+
             generator.AppendCode($"/// <inheritdoc cref=\"{propName}\"/>"); // 继承文档
             generator.AppendCode($"public static readonly {DependencyProperty} {propertyProperty} =");
-            generator.AppendCode($"    {DependencyProperty}.{registerMethod}(nameof({propertyName}), typeof({propType}), typeof({controlType}), ");
+            generator.AppendCode($"    {DependencyProperty}.{registerMethod}(\"{propertyName}\", typeof({propType}), typeof({controlType}), ");
+            //generator.AppendCode($"    {DependencyProperty}.{registerMethod}(nameof({propertyName}), typeof({propType}), typeof({controlType}), ");
             generator.AppendCode($"        new {FrameworkPropertyMetadata}({defaultValue}, {fpmOption}, {changedEventName}_g));");
 
             generator.AppendCode($"partial void {changedEventName}({propType} value);");
